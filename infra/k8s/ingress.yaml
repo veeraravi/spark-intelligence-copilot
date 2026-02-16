@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spark-intelligence-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "spark-intelligence-ip"
+    networking.gke.io/managed-certificates: "spark-intelligence-cert"
+spec:
+  rules:
+  - host: spark-intelligence.example.com
+    http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: spark-intelligence-api
+            port:
+              number: 80
+
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: spark-intelligence-cert
+spec:
+  domains:
+  - spark-intelligence.example.com
+
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: spark-intelligence-backend-config
+spec:
+  securityPolicy:
+    name: "spark-intelligence-security-policy"
+  sessionAffinity:
+    affinityType: "GENERATED_COOKIE"
+    affinityCookieTtlSec: 3600

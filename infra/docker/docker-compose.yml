@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=postgresql://spark:spark@db:5432/spark_copilot
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - LOG_LEVEL=INFO
+    depends_on:
+      - db
+      - redis
+      - kafka
+    networks:
+      - spark-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: spark
+      POSTGRES_PASSWORD: spark
+      POSTGRES_DB: spark_copilot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - spark-network
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - spark-network
+    ports:
+      - "6379:6379"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - spark-network
+    ports:
+      - "9092:9092"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - spark-network
+    ports:
+      - "2181:2181"
+
+volumes:
+  postgres_data:
+
+networks:
+  spark-network:
+    driver: bridge

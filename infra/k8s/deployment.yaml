@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-intelligence-api
+  labels:
+    app: spark-intelligence-api
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: spark-intelligence-api
+  template:
+    metadata:
+      labels:
+        app: spark-intelligence-api
+        version: v1
+    spec:
+      serviceAccountName: spark-intelligence-sa
+      containers:
+      - name: api
+        image: gcr.io/PROJECT_ID/spark-intelligence-copilot:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DEBUG
+          value: "False"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: spark-secrets
+              key: database-url
+        - name: GCP_PROJECT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: spark-config
+              key: gcp-project-id
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false

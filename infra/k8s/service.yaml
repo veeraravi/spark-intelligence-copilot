@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-intelligence-api
+  labels:
+    app: spark-intelligence-api
+spec:
+  type: LoadBalancer
+  selector:
+    app: spark-intelligence-api
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+    name: http
+  sessionAffinity: None
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark-intelligence-sa
+  labels:
+    app: spark-intelligence-api
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-config
+data:
+  gcp-project-id: "your-project-id"
+  gcp-region: "us-central1"
+  vectorstore-type: "pinecone"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: spark-secrets
+type: Opaque
+stringData:
+  database-url: "postgresql://user:password@cloudsql-proxy:5432/spark_copilot"
